@@ -1,0 +1,309 @@
+<!-- https://js.cytoscape.org/ -->
+<html>
+    <head>
+        <title>State Transition Diagram generator</title>
+<style>
+* {
+  font-size: 30px;
+}
+
+input[type=number]{
+    width: 80px;
+} 
+
+input[type=checkbox] {
+    width: 25px;
+    height: 25px;
+    -moz-appearance: none;
+    vertical-align: top;
+    margin-top: 10px;
+}
+
+#cy {
+  width: 100%;
+  height: 95%;
+}
+</style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.14.2/cytoscape.min.js"></script>
+        <script>
+
+function makeThrow(state, th) {
+    if ((state & 1) == 0) {
+        return th == 0 ? state >> 1 : undefined;
+    } else if (th == 0) {
+        return undefined;
+    } else {
+        const s = state >> 1;
+        const newThrow = (1 << (th - 1));
+        return (s & newThrow) ? undefined : s | newThrow;
+    }
+}
+
+function groundState(balls) {
+    return (1 << balls) - 1;
+}
+
+function makeGraph(balls, maxHeight) {
+    const edges = new Map();
+    const todo = [groundState(balls)];
+    const done = new Set(todo);
+
+    while (todo.length > 0) {
+        const state = todo.pop();
+        for (let th = 0; th <= maxHeight; th++) {
+            const toState = makeThrow(state, th);
+            if (toState != undefined) {
+                if (!edges.get(state)) {
+                    edges.set(state, []);
+                }
+                // if (th == 0 || th == maxHeight) {
+                    edges.get(state).push([th, toState]);
+                // }
+                if (!done.has(toState)) {
+                    todo.push(toState);
+                    done.add(toState);
+                }
+            }
+        }
+    }
+    return edges;
+}
+
+function stateName(state) {
+    return state.toString(2).split("").reverse().join("");
+}
+
+const MIN_HSL = [240, 30, 70];
+const MAX_HSL = [240, 80, 10];
+function gradient(val, max_val) {
+    const ratio = val / max_val;
+    const HSL = [
+        (1 - ratio) * MIN_HSL[0] + ratio * MAX_HSL[0],
+        (1 - ratio) * MIN_HSL[1] + ratio * MAX_HSL[1],
+        (1 - ratio) * MIN_HSL[2] + ratio * MAX_HSL[2],
+    ];
+    return `hsl(${HSL[0]}, ${HSL[1]}%, ${HSL[2]}%)`;
+}
+
+const moreColors = ['lightgreen', 'yellow', 'blue', 'orange', 'lightred', 'lightpurple', 'gray'];
+
+function getElements(balls, maxHeight, colorStates, colorThrows) {
+    const adjList = makeGraph(balls, maxHeight);
+    const nodes = [];
+    for (const state of adjList.keys()) {
+        nodes.push({
+            data: {
+                id: state, 
+                label: stateName(state),
+                color: colorStates ? moreColors[stateName(state).length - balls] : '#30c9bc',
+            }
+        });
+    }
+    const edges = [];
+    for (const from of adjList.keys()) {
+        for (const edge of adjList.get(from)) {
+            const th = edge[0];
+            const to = edge[1];
+            edges.push({
+                data: {
+                    id: from + 'to' + to, 
+                    label: th,
+                    source: from,
+                    target: to,
+                    color: colorThrows ? gradient(th, maxHeight) : '#30c9bc',
+                }
+            });
+        }
+    }
+    return nodes.concat(edges);
+}
+
+const longestPrimeSiteswap = [
+    // 0 ball
+    [],
+    // 1 ball
+    ["", "1", "20", "300", "4000", "50000", "600000", "7000000", "80000000", "900000000", "a000000000"],
+    // 2 ball
+    ["", "", "2", "330", "4130", "52050400", "620500605000", "730070060007060000", "830070008007000080700000"],
+    // 3 ball
+    ["", "", "", "3", "4440", "55150530", "661600640606130", "773007071700706070074007706000"],
+    // 4 ball
+    ["", "", "", "", "4", "55550", "666160661640", "777170077307707170770607077400"],
+    // 5 ball
+    ["", "", "", "", "", "5", "666660", "777717077717707740", "858880807088807800888308808818088086080888400"],
+    // 6 ball
+    ["", "", "", "", "", "", "6", "7777770", "888881808888188088818850", "77799908919099990809099992099099919099099191999099050"],
+    // 7 ball
+    ["", "", "", "", "", "", "", "7", "88888880", "99999919099999199099991999099950"],
+    // 8 ball
+    ["", "", "", "", "", "", "", "", "8", "999999990", "aaaaaaa1a0aaaaaa1aa0aaaaa1aaa0aaaa1aaa60"],
+    // 9 ball
+    ["", "", "", "", "", "", "", "", "", "9", "aaaaaaaaa0", "bbbbbbbb1b0bbbbbbb1bb0bbbbbb1bbb0bbbbb1bbbb0bbbb60"],
+];
+
+const rotations = [
+    0,
+    0,
+    1,
+    1.5,
+    2.5,
+    4.5,
+    3,
+    5.5,
+    3.5,
+];
+
+function ssToInt(ss) {
+    if ("0" <= ss && ss <= "9") {
+        return parseInt(ss);
+    } else {
+        return ss.charCodeAt() - "a".charCodeAt() + 10;
+    }
+}
+
+function ssCircleLayout(cy, nBalls, ss, startAngle) {
+    if (startAngle === undefined) {
+        startAngle = 3/2 * Math.PI;
+    }
+    const order = {};
+    let state = groundState(nBalls);
+    for (let i = 0; i < ss.length; i++) {
+        order[state] = i;
+        state = makeThrow(state, ssToInt(ss[i]));
+    }
+    const extra = cy.nodes().filter(node =>{
+        return order[node.data().id] === undefined;
+    });
+    extra.layout({ name: "breadthfirst", }).run();
+    const mainCircle = cy.nodes().filter(node =>{
+        return order[node.data().id] !== undefined;
+    });
+    mainCircle.layout({
+        name: "circle",
+        sort: (a, b) => { return order[a.data().id] - order[b.data().id]; },
+        startAngle: startAngle,
+    }).run();
+}
+
+var cy;
+function applyLayout() {
+    const nBalls = parseInt(document.getElementById('nBalls').value);
+    const maxHeight = parseInt(document.getElementById('maxHeight').value);
+    const layout = document.getElementById('layout').value;
+    const layoutSpec = { name: layout };
+    if (layout == "prime") {
+        if (nBalls < longestPrimeSiteswap.length &&
+            maxHeight < longestPrimeSiteswap[nBalls].length) {
+            // Make a circle of the longest prime siteswap.
+            const ss = longestPrimeSiteswap[nBalls][maxHeight];
+            let startAngle = 3/2 * Math.PI;
+            if (nBalls + 2 == maxHeight && nBalls < rotations.length) {
+                startAngle = rotations[nBalls] * (2 * Math.PI) / ss.length - Math.PI / 2;
+            }
+            ssCircleLayout(cy, nBalls, ss, startAngle);
+            return;
+        } else {
+            // Default to circle
+            layoutSpec.name = "circle";
+        }
+    } else if (layout == "sscircle") {
+        const ss = document.getElementById('layoutss').value;
+        ssCircleLayout(cy, nBalls, ss);
+        return;
+    } else if (layout == "breadthfirst") {
+        layoutSpec.roots = [groundState(nBalls)];
+    } else if (layout == "concentric1") {
+        layoutSpec.name = "concentric";
+        layoutSpec.minNodeSpacing = 100;
+    } else if (layout == "concentric2") {
+        layoutSpec.name = "concentric";
+        layoutSpec.minNodeSpacing = 100;
+        layoutSpec.concentric = node => { return maxHeight - node.data().label.length; };
+        layoutSpec.levelWidth = node => { return 1; };
+    }
+    cy.layout(layoutSpec).run();
+
+}
+
+function generate() {
+    const nBalls = parseInt(document.getElementById('nBalls').value);
+    const maxHeight = parseInt(document.getElementById('maxHeight').value);
+    const colorStates = document.getElementById('colorStates').checked;
+    const colorThrows = document.getElementById('colorThrows').checked;
+    cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: getElements(nBalls, maxHeight, colorStates, colorThrows),
+        style: [
+            {
+                selector: 'node',
+                style: {
+                    'label': 'data(label)',
+                    'shape': 'round-rectangle',
+                    'width': 'label',
+                    'height': 'label',
+                    'padding': 5,
+                    'background-color': 'data(color)',
+                    'text-valign': 'center',
+                }
+            },
+
+            {
+                selector: 'edge',
+                style: {
+                    'source-label': 'data(label)',
+                    'source-text-offset': 50,
+                    'curve-style': 'bezier',
+                    'width': 2,
+                    'line-color': 'data(color)',
+                    'text-valign': 'center',
+                    'target-arrow-color': 'data(color)',
+                    'target-arrow-shape': 'triangle',
+                    'text-outline-color': 'white',
+                    'text-outline-width': 3,
+                    'min-zoomed-font-size': 6,
+                    // 'text-rotation': 'autorotate',
+                }
+            }
+        ],
+
+    });
+    applyLayout();
+    cy.nodes().on('mouseout', evt => {
+        cy.elements().style('opacity', 1);
+    });
+    cy.nodes().on('mouseover', evt => {
+        cy.elements().subtract(evt.target.closedNeighborhood()).style('opacity', 0.2);
+    });
+};
+window.onload = generate;
+function pageRank() {
+    const rank = cy.elements().pageRank().rank;
+    const nodes = cy.nodes().map(n => { return [n.data().label, rank(n)]; });
+    nodes.sort((a, b) => { return b[1] - a[1]; });
+    nodes.forEach(n => {
+        console.log(n[0], n[1]);
+    });
+}
+        </script>
+    </head>
+    <body>
+        Number of balls: <input type="number" id="nBalls" value="3" onchange="generate()">
+        Max height: <input type="number" id="maxHeight" value="5" onchange="generate()">
+        Layout: 
+        <select id="layout" onchange="generate()">
+            <option value="prime">Prime circle</option>
+            <option value="circle">Circle</option>
+            <option value="sscircle">SS Circle</option>
+            <option value="grid">Grid</option>
+            <option value="breadthfirst">Breadth-first</option>
+            <option value="concentric1">Concentric - default</option>
+            <option value="concentric2">Concentric - state length</option>
+            <option value="cose">Cose</option>
+            <option value="random">Random</option>
+        </select>
+        <input type="text" id="layoutss" onchange="generate()">
+        Colour throws: <input type="checkbox" id="colorThrows" checked onchange="generate()">
+        Colour states: <input type="checkbox" id="colorStates" checked onchange="generate()">
+        <div id="cy"></div>
+    </body>
+</html>
