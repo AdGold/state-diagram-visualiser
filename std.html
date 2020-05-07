@@ -12,16 +12,31 @@ input[type=number]{
 } 
 
 input[type=checkbox] {
-    width: 25px;
-    height: 25px;
+    width: 35px;
+    height: 35px;
     -moz-appearance: none;
     vertical-align: top;
-    margin-top: 10px;
+    margin-top: 1px;
+}
+
+.controls {
+    display: flex;
+    justify-content: space-between;
+}
+
+.controls > div {
+    padding: 10px;
+}
+
+label {
+    width: 250px;
+    text-align: right;
+    display: inline-block;
 }
 
 #cy {
   width: 100%;
-  height: 95%;
+  height: 90%;
 }
 </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.14.2/cytoscape.min.js"></script>
@@ -56,9 +71,7 @@ function makeGraph(balls, maxHeight) {
                 if (!edges.get(state)) {
                     edges.set(state, []);
                 }
-                // if (th == 0 || th == maxHeight) {
-                    edges.get(state).push([th, toState]);
-                // }
+                edges.get(state).push([th, toState]);
                 if (!done.has(toState)) {
                     todo.push(toState);
                     done.add(toState);
@@ -95,7 +108,7 @@ function getElements(balls, maxHeight, colorStates, colorThrows) {
             data: {
                 id: state, 
                 label: stateName(state),
-                color: colorStates ? moreColors[stateName(state).length - balls] : '#30c9bc',
+                color: colorStates ? moreColors[stateName(state).length - balls] : 'lightblue',
             }
         });
     }
@@ -110,7 +123,7 @@ function getElements(balls, maxHeight, colorStates, colorThrows) {
                     label: th,
                     source: from,
                     target: to,
-                    color: colorThrows ? gradient(th, maxHeight) : '#30c9bc',
+                    color: colorThrows ? gradient(th, maxHeight) : 'darkblue',
                 }
             });
         }
@@ -162,20 +175,16 @@ function ssToInt(ss) {
     }
 }
 
-function ssCircleLayout(cy, nBalls, ss, startAngle) {
+function ssCircleLayout(cy, balls, ss, startAngle, curve) {
     if (startAngle === undefined) {
         startAngle = 3/2 * Math.PI;
     }
     const order = {};
-    let state = groundState(nBalls);
+    let state = groundState(balls);
     for (let i = 0; i < ss.length; i++) {
         order[state] = i;
         state = makeThrow(state, ssToInt(ss[i]));
     }
-    const extra = cy.nodes().filter(node =>{
-        return order[node.data().id] === undefined;
-    });
-    extra.layout({ name: "breadthfirst", }).run();
     const mainCircle = cy.nodes().filter(node =>{
         return order[node.data().id] !== undefined;
     });
@@ -184,24 +193,80 @@ function ssCircleLayout(cy, nBalls, ss, startAngle) {
         sort: (a, b) => { return order[a.data().id] - order[b.data().id]; },
         startAngle: startAngle,
     }).run();
+    const extra = cy.nodes().filter(node =>{
+        return order[node.data().id] === undefined;
+    });
+    if (extra.length > 0) {
+        // Place extra nodes on the midpoint but further out on an outer circle
+        const minConnection = {};
+        const maxConnection = {};
+        for (const node of extra) {
+            let min = mainCircle.length;
+            let max = 0;
+            for (const neighbor of node.neighborhood()) {
+                const place = order[neighbor.data().id];
+                if (place !== undefined) {
+                    min = Math.min(min, place);
+                    max = Math.max(max, place);
+                }
+            }
+            minConnection[node.data().id] = min;
+            maxConnection[node.data().id] = max;
+        }
+        let sumX = 0;
+        let sumY = 0;
+        for (const node of mainCircle) {
+            sumX += node.position().x;
+            sumY += node.position().y;
+        }
+        const midX = sumX / mainCircle.length;
+        const midY = sumY / mainCircle.length;
+        const p = mainCircle[0].position();
+        const radius = 100 + Math.sqrt((p.x - midX) * (p.x - midX) + (p.y - midY) * (p.y - midY));
+        for (const node of extra) {
+            const min = minConnection[node.data().id];
+            const max = maxConnection[node.data().id];
+            let mid = (max + min) / 2;
+            if (max - min >= mainCircle.length / 2) {
+                mid -= mainCircle.length / 2;
+            }
+            const angle = startAngle + mid * (2 * Math.PI) / mainCircle.length;
+            const x = midX + radius * Math.cos(angle);
+            const y = midY + radius * Math.sin(angle);
+            node.position({x: x, y: y});
+        }
+        extra.layout({ name: "preset" }).run();
+        if (curve) {
+            // Add curved adges between degree 2 extra nodes and the main circle
+            extra.connectedEdges().style('curve-style', 'unbundled-bezier');
+            extra.connectedEdges().style('control-point-distance', 100);
+            extra.filter(edge => {
+                return edge.connectedEdges().length > 2;
+            }).connectedEdges().style('curve-style', 'bezier');
+        }
+        cy.fit();
+    }
 }
 
 var cy;
 function applyLayout() {
-    const nBalls = parseInt(document.getElementById('nBalls').value);
+    const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
     const layout = document.getElementById('layout').value;
+    document.getElementById('layoutss').style.visibility = layout == 'sscircle' ? 'visible' : 'hidden';
     const layoutSpec = { name: layout };
+    // Reset edges to bezier
+    cy.edges().style('curve-style', 'bezier');
     if (layout == "prime") {
-        if (nBalls < longestPrimeSiteswap.length &&
-            maxHeight < longestPrimeSiteswap[nBalls].length) {
+        if (balls < longestPrimeSiteswap.length &&
+            maxHeight < longestPrimeSiteswap[balls].length) {
             // Make a circle of the longest prime siteswap.
-            const ss = longestPrimeSiteswap[nBalls][maxHeight];
+            const ss = longestPrimeSiteswap[balls][maxHeight];
             let startAngle = 3/2 * Math.PI;
-            if (nBalls + 2 == maxHeight && nBalls < rotations.length) {
-                startAngle = rotations[nBalls] * (2 * Math.PI) / ss.length - Math.PI / 2;
+            if (balls + 2 == maxHeight && balls < rotations.length) {
+                startAngle = rotations[balls] * (2 * Math.PI) / ss.length - Math.PI / 2;
             }
-            ssCircleLayout(cy, nBalls, ss, startAngle);
+            ssCircleLayout(cy, balls, ss, startAngle, true);
             return;
         } else {
             // Default to circle
@@ -209,10 +274,10 @@ function applyLayout() {
         }
     } else if (layout == "sscircle") {
         const ss = document.getElementById('layoutss').value;
-        ssCircleLayout(cy, nBalls, ss);
+        ssCircleLayout(cy, balls, ss, false);
         return;
     } else if (layout == "breadthfirst") {
-        layoutSpec.roots = [groundState(nBalls)];
+        layoutSpec.roots = [groundState(balls)];
     } else if (layout == "concentric1") {
         layoutSpec.name = "concentric";
         layoutSpec.minNodeSpacing = 100;
@@ -227,13 +292,13 @@ function applyLayout() {
 }
 
 function generate() {
-    const nBalls = parseInt(document.getElementById('nBalls').value);
+    const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
     const colorStates = document.getElementById('colorStates').checked;
     const colorThrows = document.getElementById('colorThrows').checked;
     cy = cytoscape({
         container: document.getElementById('cy'),
-        elements: getElements(nBalls, maxHeight, colorStates, colorThrows),
+        elements: getElements(balls, maxHeight, colorStates, colorThrows),
         style: [
             {
                 selector: 'node',
@@ -254,7 +319,7 @@ function generate() {
                     'source-label': 'data(label)',
                     'source-text-offset': 50,
                     'curve-style': 'bezier',
-                    'width': 2,
+                    'width': 3,
                     'line-color': 'data(color)',
                     'text-valign': 'center',
                     'target-arrow-color': 'data(color)',
@@ -262,7 +327,6 @@ function generate() {
                     'text-outline-color': 'white',
                     'text-outline-width': 3,
                     'min-zoomed-font-size': 6,
-                    // 'text-rotation': 'autorotate',
                 }
             }
         ],
@@ -270,12 +334,42 @@ function generate() {
     });
     applyLayout();
     cy.nodes().on('mouseout', evt => {
-        cy.elements().style('opacity', 1);
+        updateFaded();
     });
     cy.nodes().on('mouseover', evt => {
+        evt.target.closedNeighborhood().style('opacity', 1);
         cy.elements().subtract(evt.target.closedNeighborhood()).style('opacity', 0.2);
     });
+    cy.clicked = cy.collection();
+    //cy.nodes().on('click', toggleNode);
+    cy.nodes().on('tap', toggleNode);
+    updateFaded();
 };
+function resetClicked() {
+    cy.clicked = cy.collection();
+    updateFaded();
+}
+function toggleNode(e) {
+    const clickedNode = e.target;
+    if (cy.clicked.has(clickedNode)) {
+        cy.clicked = cy.clicked.subtract(clickedNode);
+    } else {
+        cy.clicked = cy.clicked.union(clickedNode);
+    }
+    updateFaded();
+}
+function updateFaded() {
+    const faded = new Set();
+    for (const fade of document.getElementById('faded').value.split(',')) {
+        faded.add(parseInt(fade));
+    }
+    const nodes = (cy.clicked.length == 0) ? cy.nodes() : cy.clicked;
+    const eles = nodes.union(nodes.edgesWith(nodes).filter(edge => {
+        return !faded.has(edge.data().label);
+    }));
+    eles.style('opacity', 1);
+    cy.elements().subtract(eles).style('opacity', 0.2);
+}
 window.onload = generate;
 function pageRank() {
     const rank = cy.elements().pageRank().rank;
@@ -288,23 +382,39 @@ function pageRank() {
         </script>
     </head>
     <body>
-        Number of balls: <input type="number" id="nBalls" value="3" onchange="generate()">
-        Max height: <input type="number" id="maxHeight" value="5" onchange="generate()">
-        Layout: 
-        <select id="layout" onchange="generate()">
-            <option value="prime">Prime circle</option>
-            <option value="circle">Circle</option>
-            <option value="sscircle">SS Circle</option>
-            <option value="grid">Grid</option>
-            <option value="breadthfirst">Breadth-first</option>
-            <option value="concentric1">Concentric - default</option>
-            <option value="concentric2">Concentric - state length</option>
-            <option value="cose">Cose</option>
-            <option value="random">Random</option>
-        </select>
-        <input type="text" id="layoutss" onchange="generate()">
-        Colour throws: <input type="checkbox" id="colorThrows" checked onchange="generate()">
-        Colour states: <input type="checkbox" id="colorStates" checked onchange="generate()">
+        <div class="controls">
+            <div>
+                <label for="balls">Number of balls&nbsp;</label><input type="number" id="balls" value="3" onchange="generate()">
+                <br>
+                <label for="maxHeight">Max height&nbsp;</label><input type="number" id="maxHeight" value="5" onchange="generate()">
+            </div>
+            <div>
+                <input type="checkbox" id="colorThrows" checked onchange="generate()">Colour throws
+                <br>
+                <input type="checkbox" id="colorStates" checked onchange="generate()">Colour states
+            </div>
+            <div>
+                <input type="button" value="Clear selected nodes" onclick="resetClicked()">
+                <br>
+                Fade throws <input type="text" id="faded" oninput="updateFaded()" title="Throws to fade (comma separated)">
+            </div>
+            <div>
+                Layout 
+                <select id="layout" onchange="applyLayout()">
+                    <option value="prime">Auto</option>
+                    <option value="circle">Circle</option>
+                    <option value="grid">Grid</option>
+                    <option value="breadthfirst">Breadth-first</option>
+                    <option value="concentric1">Concentric - default</option>
+                    <option value="concentric2">Concentric - state length</option>
+                    <option value="cose">Cose</option>
+                    <option value="random">Random</option>
+                    <option value="sscircle">Custom SS Circle</option>
+                </select>
+                <br>
+                <input type="text" id="layoutss" oninput="generate()">
+            </div>
+        </div>
         <div id="cy"></div>
     </body>
 </html>
