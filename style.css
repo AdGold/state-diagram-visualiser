@@ -1,0 +1,35 @@
+* {
+  font-size: 30px;
+}
+
+input[type=number]{
+    width: 80px;
+} 
+
+input[type=checkbox] {
+    width: 35px;
+    height: 35px;
+    -moz-appearance: none;
+    vertical-align: top;
+    margin-top: 1px;
+}
+
+.controls {
+    display: flex;
+    justify-content: space-between;
+}
+
+.controls > div {
+    padding: 10px;
+}
+
+label {
+    width: 250px;
+    text-align: right;
+    display: inline-block;
+}
+
+#cy {
+  width: 100%;
+  height: 90%;
+}

@@ -1,136 +1,32 @@
-<!-- https://js.cytoscape.org/ -->
-<html>
-    <head>
-        <title>State Transition Diagram generator</title>
-<style>
-* {
-  font-size: 30px;
-}
-
-input[type=number]{
-    width: 80px;
-} 
-
-input[type=checkbox] {
-    width: 35px;
-    height: 35px;
-    -moz-appearance: none;
-    vertical-align: top;
-    margin-top: 1px;
-}
-
-.controls {
-    display: flex;
-    justify-content: space-between;
-}
-
-.controls > div {
-    padding: 10px;
-}
-
-label {
-    width: 250px;
-    text-align: right;
-    display: inline-block;
-}
-
-#cy {
-  width: 100%;
-  height: 90%;
-}
-</style>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.14.2/cytoscape.min.js"></script>
-        <script>
-
-function makeThrow(state, th) {
-    if ((state & 1) == 0) {
-        return th == 0 ? state >> 1 : undefined;
-    } else if (th == 0) {
-        return undefined;
-    } else {
-        const s = state >> 1;
-        const newThrow = (1 << (th - 1));
-        return (s & newThrow) ? undefined : s | newThrow;
-    }
-}
-
-function groundState(balls) {
-    return (1 << balls) - 1;
-}
-
-function makeGraph(balls, maxHeight) {
-    const edges = new Map();
-    const todo = [groundState(balls)];
-    const done = new Set(todo);
-
-    while (todo.length > 0) {
-        const state = todo.pop();
-        for (let th = 0; th <= maxHeight; th++) {
-            const toState = makeThrow(state, th);
-            if (toState != undefined) {
-                if (!edges.get(state)) {
-                    edges.set(state, []);
-                }
-                edges.get(state).push([th, toState]);
-                if (!done.has(toState)) {
-                    todo.push(toState);
-                    done.add(toState);
-                }
-            }
+const GRAPH_STYLE = [
+    {
+        selector: 'node',
+        style: {
+            'label': 'data(label)',
+            'shape': 'round-rectangle',
+            'width': 'label',
+            'height': 'label',
+            'padding': 5,
+            'text-valign': 'center',
+        }
+    },
+    {
+        selector: 'edge',
+        style: {
+            'source-label': 'data(label)',
+            'source-text-offset': 50,
+            'curve-style': 'bezier',
+            'width': 3,
+            'text-valign': 'center',
+            'target-arrow-shape': 'triangle',
+            'text-outline-color': 'white',
+            'text-outline-width': 3,
+            'min-zoomed-font-size': 6,
         }
     }
-    return edges;
-}
+];
 
-function stateName(state) {
-    return state.toString(2).split("").reverse().join("");
-}
-
-const MIN_HSL = [240, 30, 70];
-const MAX_HSL = [240, 80, 10];
-function gradient(val, max_val) {
-    const ratio = val / max_val;
-    const HSL = [
-        (1 - ratio) * MIN_HSL[0] + ratio * MAX_HSL[0],
-        (1 - ratio) * MIN_HSL[1] + ratio * MAX_HSL[1],
-        (1 - ratio) * MIN_HSL[2] + ratio * MAX_HSL[2],
-    ];
-    return `hsl(${HSL[0]}, ${HSL[1]}%, ${HSL[2]}%)`;
-}
-
-const moreColors = ['lightgreen', 'yellow', 'blue', 'orange', 'lightred', 'lightpurple', 'gray'];
-
-function getElements(balls, maxHeight, colorStates, colorThrows) {
-    const adjList = makeGraph(balls, maxHeight);
-    const nodes = [];
-    for (const state of adjList.keys()) {
-        nodes.push({
-            data: {
-                id: state, 
-                label: stateName(state),
-                color: colorStates ? moreColors[stateName(state).length - balls] : 'lightblue',
-            }
-        });
-    }
-    const edges = [];
-    for (const from of adjList.keys()) {
-        for (const edge of adjList.get(from)) {
-            const th = edge[0];
-            const to = edge[1];
-            edges.push({
-                data: {
-                    id: from + 'to' + to, 
-                    label: th,
-                    source: from,
-                    target: to,
-                    color: colorThrows ? gradient(th, maxHeight) : 'darkblue',
-                }
-            });
-        }
-    }
-    return nodes.concat(edges);
-}
-
+// Layouts
 // From https://web.archive.org/web/20110317025440/http://www.jugglingdb.com:80/compendium/boyce/prime_list.html#4_8
 const longestPrimeSiteswap = [
     // 0 ball
@@ -155,6 +51,7 @@ const longestPrimeSiteswap = [
     ["", "", "", "", "", "", "", "", "", "9", "aaaaaaaaa0", "bbbbbbbb1b0bbbbbbb1bb0bbbbbb1bbb0bbbbb1bbbb0bbbb60"],
 ];
 
+// Hardcode rotations to make the common max height = balls + 2 look nicer
 const rotations = [
     0,
     0,
@@ -185,17 +82,13 @@ function ssCircleLayout(cy, balls, ss, startAngle, curve) {
         order[state] = i;
         state = makeThrow(state, ssToInt(ss[i]));
     }
-    const mainCircle = cy.nodes().filter(node =>{
-        return order[node.data().id] !== undefined;
-    });
+    const mainCircle = cy.nodes().filter(node => order[node.data().id] !== undefined);
     mainCircle.layout({
         name: "circle",
-        sort: (a, b) => { return order[a.data().id] - order[b.data().id]; },
+        sort: (a, b) => order[a.data().id] - order[b.data().id],
         startAngle: startAngle,
     }).run();
-    const extra = cy.nodes().filter(node =>{
-        return order[node.data().id] === undefined;
-    });
+    const extra = cy.nodes().filter(node => order[node.data().id] === undefined);
     if (extra.length > 0) {
         // Place extra nodes on the midpoint but further out on an outer circle
         const minConnection = {};
@@ -240,15 +133,12 @@ function ssCircleLayout(cy, balls, ss, startAngle, curve) {
             // Add curved adges between degree 2 extra nodes and the main circle
             extra.connectedEdges().style('curve-style', 'unbundled-bezier');
             extra.connectedEdges().style('control-point-distance', 100);
-            extra.filter(edge => {
-                return edge.connectedEdges().length > 2;
-            }).connectedEdges().style('curve-style', 'bezier');
+            extra.filter(edge => edge.connectedEdges().length > 2).connectedEdges().style('curve-style', 'bezier');
         }
         cy.fit();
     }
 }
 
-var cy;
 function applyLayout() {
     const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
@@ -284,71 +174,67 @@ function applyLayout() {
     } else if (layout == "concentric2") {
         layoutSpec.name = "concentric";
         layoutSpec.minNodeSpacing = 100;
-        layoutSpec.concentric = node => { return maxHeight - node.data().label.length; };
-        layoutSpec.levelWidth = node => { return 1; };
+        layoutSpec.concentric = node => maxHeight - node.data().label.length;
+        layoutSpec.levelWidth = node => 1;
     }
     cy.layout(layoutSpec).run();
-
 }
 
+var cy;
 function generate() {
-    const balls = parseInt(document.getElementById('balls').value);
-    const maxHeight = parseInt(document.getElementById('maxHeight').value);
-    const colorStates = document.getElementById('colorStates').checked;
-    const colorThrows = document.getElementById('colorThrows').checked;
     cy = cytoscape({
         container: document.getElementById('cy'),
-        elements: getElements(balls, maxHeight, colorStates, colorThrows),
-        style: [
-            {
-                selector: 'node',
-                style: {
-                    'label': 'data(label)',
-                    'shape': 'round-rectangle',
-                    'width': 'label',
-                    'height': 'label',
-                    'padding': 5,
-                    'background-color': 'data(color)',
-                    'text-valign': 'center',
-                }
-            },
-
-            {
-                selector: 'edge',
-                style: {
-                    'source-label': 'data(label)',
-                    'source-text-offset': 50,
-                    'curve-style': 'bezier',
-                    'width': 3,
-                    'line-color': 'data(color)',
-                    'text-valign': 'center',
-                    'target-arrow-color': 'data(color)',
-                    'target-arrow-shape': 'triangle',
-                    'text-outline-color': 'white',
-                    'text-outline-width': 3,
-                    'min-zoomed-font-size': 6,
-                }
-            }
-        ],
-
+        elements: getElements(),
+        style: GRAPH_STYLE,
     });
-    applyLayout();
-    cy.nodes().on('mouseout', evt => {
-        updateFaded();
-    });
+    cy.nodes().on('mouseout',updateFaded);
     cy.nodes().on('mouseover', evt => {
         evt.target.closedNeighborhood().style('opacity', 1);
         cy.elements().subtract(evt.target.closedNeighborhood()).style('opacity', 0.2);
     });
-    cy.clicked = cy.collection();
-    //cy.nodes().on('click', toggleNode);
     cy.nodes().on('tap', toggleNode);
-    updateFaded();
+    applyLayout();
+    resetClicked();
+    updateColors();
 };
+
+// Colouring
+const BLUE_MIN = [240, 30, 70];
+const BLUE_MAX = [240, 80, 10];
+function gradient(val, maxVal) {
+    const ratio = val / maxVal;
+    const HSL = [
+        (1 - ratio) * BLUE_MIN[0] + ratio * BLUE_MAX[0],
+        (1 - ratio) * BLUE_MIN[1] + ratio * BLUE_MAX[1],
+        (1 - ratio) * BLUE_MIN[2] + ratio * BLUE_MAX[2],
+    ];
+    return `hsl(${HSL[0]}, ${HSL[1]}%, ${HSL[2]}%)`;
+}
+
+const stateColors = ['springgreen', 'yellow', 'skyblue', 'orange', 'lightcoral', 'lavender', 'gray'];
+
+function updateColors() {
+    const balls = parseInt(document.getElementById('balls').value);
+    const maxHeight = parseInt(document.getElementById('maxHeight').value);
+    const colorStates = document.getElementById('colorStates').checked;
+    const colorThrows = document.getElementById('colorThrows').checked;
+    cy.nodes().forEach(n => {
+        const col = colorStates ? stateColors[n.data().label.length - balls] : 'lightseagreen';
+        n.style('background-color', col);
+    });
+    cy.edges().forEach(e => {
+        const col = colorThrows ? gradient(parseInt(e.data().label), maxHeight) : 'darkblue';
+        e.style('line-color', col);
+        e.style('target-arrow-color', col);
+    });
+}
+
+// Opacity filtering
 function resetClicked() {
     cy.clicked = cy.collection();
     updateFaded();
 }
+
 function toggleNode(e) {
     const clickedNode = e.target;
     if (cy.clicked.has(clickedNode)) {
@@ -358,63 +244,53 @@ function toggleNode(e) {
     }
     updateFaded();
 }
+
 function updateFaded() {
     const faded = new Set();
     for (const fade of document.getElementById('faded').value.split(',')) {
         faded.add(parseInt(fade));
     }
     const nodes = (cy.clicked.length == 0) ? cy.nodes() : cy.clicked;
-    const eles = nodes.union(nodes.edgesWith(nodes).filter(edge => {
-        return !faded.has(edge.data().label);
-    }));
+    const eles = nodes.union(nodes.edgesWith(nodes).filter(edge => !faded.has(edge.data().label)));
     eles.style('opacity', 1);
     cy.elements().subtract(eles).style('opacity', 0.2);
 }
+
+function getElements() {
+    const balls = parseInt(document.getElementById('balls').value);
+    const maxHeight = parseInt(document.getElementById('maxHeight').value);
+    const adjList = makeGraph(balls, maxHeight);
+    const nodes = [];
+    for (const state of adjList.keys()) {
+        nodes.push({
+            data: {
+                id: state, 
+                label: stateName(state),
+            }
+        });
+    }
+    const edges = [];
+    for (const from of adjList.keys()) {
+        for (const edge of adjList.get(from)) {
+            const th = edge[0];
+            const to = edge[1];
+            edges.push({
+                data: {
+                    id: from + 'to' + to, 
+                    label: th,
+                    source: from,
+                    target: to,
+                }
+            });
+        }
+    }
+    return nodes.concat(edges);
+}
+
 window.onload = generate;
 function pageRank() {
     const rank = cy.elements().pageRank().rank;
-    const nodes = cy.nodes().map(n => { return [n.data().label, rank(n)]; });
-    nodes.sort((a, b) => { return b[1] - a[1]; });
-    nodes.forEach(n => {
-        console.log(n[0], n[1]);
-    });
+    const nodes = cy.nodes().map(n => [n.data().label, rank(n)]);
+    nodes.sort((a, b) => b[1] - a[1]);
+    nodes.forEach(n => console.log(n[0], n[1]));
 }
-        </script>
-    </head>
-    <body>
-        <div class="controls">
-            <div>
-                <label for="balls">Number of balls&nbsp;</label><input type="number" id="balls" value="3" onchange="generate()">
-                <br>
-                <label for="maxHeight">Max height&nbsp;</label><input type="number" id="maxHeight" value="5" onchange="generate()">
-            </div>
-            <div>
-                <input type="checkbox" id="colorThrows" checked onchange="generate()">Colour throws
-                <br>
-                <input type="checkbox" id="colorStates" checked onchange="generate()">Colour states
-            </div>
-            <div>
-                <input type="button" value="Clear selected nodes" onclick="resetClicked()">
-                <br>
-                Fade throws <input type="text" id="faded" oninput="updateFaded()" title="Throws to fade (comma separated)">
-            </div>
-            <div>
-                Layout 
-                <select id="layout" onchange="applyLayout()">
-                    <option value="prime">Auto</option>
-                    <option value="circle">Circle</option>
-                    <option value="grid">Grid</option>
-                    <option value="breadthfirst">Breadth-first</option>
-                    <option value="concentric1">Concentric - default</option>
-                    <option value="concentric2">Concentric - state length</option>
-                    <option value="cose">Cose</option>
-                    <option value="random">Random</option>
-                    <option value="sscircle">Custom SS Circle</option>
-                </select>
-                <br>
-                <input type="text" id="layoutss" oninput="generate()">
-            </div>
-        </div>
-        <div id="cy"></div>
-    </body>
-</html>
