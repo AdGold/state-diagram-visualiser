@@ -9,27 +9,40 @@
     <body>
         <div class="controls">
             <div>
-                <label for="balls">Number of balls&nbsp;</label><input type="number" id="balls" value="3" onchange="generate()">
+                <span class="heading">State Transition Diagram Generator</span>
                 <br>
-                <label for="maxHeight">Max height&nbsp;</label><input type="number" id="maxHeight" value="5" onchange="generate()">
+                <br>
             </div>
             <div>
+                <b>Graph generation</b>
+                <br>
+                Number of balls&nbsp;<input type="number" id="balls" value="3" onchange="generate()">
+                <br>
+                Max height&nbsp;<input type="number" id="maxHeight" value="5" onchange="generate()">
+                <br>
+                <b> Period limitation </b>
+                <br>
                 Period&nbsp;<input type="text" id="period" value="" onchange="generate()" class="optionalNumber" title="Only shows states which exist in siteswaps of this period (leave empty for no filtering)">
                 <br>
                 <input type="checkbox" id="allowLess" onclick="generate()">Allow smaller periods
             </div>
             <div>
+                <b>Colours</b>
+                <br>
                 <input type="checkbox" id="colorThrows" checked onchange="updateColors()">Colour throws
                 <br>
                 <input type="checkbox" id="colorStates" checked onchange="updateColors()">Colour states
             </div>
             <div>
-                <input type="button" value="Clear selected nodes" onclick="resetClicked()">
+                <b>Fading</b>
+                <br>
+                <input type="button" value="Clear selected nodes" onclick="resetClicked()" title="Clear all nodes selected by clicking">
                 <br>
                 Fade throws <input type="text" id="faded" oninput="updateFaded()" title="Throws to fade (comma separated)">
             </div>
             <div>
-                Layout 
+                <b>Layout</b>
+                <br>
                 <select id="layout" onchange="applyLayout()">
                     <option value="prime">Auto</option>
                     <option value="circle">Circle</option>
