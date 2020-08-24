@@ -14,7 +14,23 @@ function groundState(balls) {
     return (1 << balls) - 1;
 }
 
-function makeGraph(balls, maxHeight) {
+function hasPathOfLength(length, state, to, edges, allowLess) {
+    if (length == 0) {
+        return to == state;
+    }
+    for (const edge of edges.get(state)) {
+        const edgeTo = edge[1];
+        if (allowLess && to == edgeTo) {
+            return true;
+        }
+        if (hasPathOfLength(length-1, edgeTo, to, edges, allowLess)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function makeGraph(balls, maxHeight, period, allowLess) {
     const edges = new Map();
     const todo = [groundState(balls)];
     const done = new Set(todo);
@@ -33,6 +49,20 @@ function makeGraph(balls, maxHeight) {
                     done.add(toState);
                 }
             }
+        }
+    }
+    if (period) {
+        const remove = new Set();
+        for (const state of edges.keys()) {
+            if (!hasPathOfLength(period, state, state, edges, allowLess)) {
+                remove.add(state);
+            }
+        }
+        for (const rem of remove) {
+            edges.delete(rem);
+        }
+        for (const state of edges.keys()) {
+            edges.set(state, edges.get(state).filter(x => !remove.has(x[1])));
         }
     }
     return edges;

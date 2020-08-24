@@ -14,6 +14,11 @@
                 <label for="maxHeight">Max height&nbsp;</label><input type="number" id="maxHeight" value="5" onchange="generate()">
             </div>
             <div>
+                Period&nbsp;<input type="text" id="period" value="" onchange="generate()" class="optionalNumber" title="Only shows states which exist in siteswaps of this period (leave empty for no filtering)">
+                <br>
+                <input type="checkbox" id="allowLess" onclick="generate()">Allow smaller periods
+            </div>
+            <div>
                 <input type="checkbox" id="colorThrows" checked onchange="updateColors()">Colour throws
                 <br>
                 <input type="checkbox" id="colorStates" checked onchange="updateColors()">Colour states

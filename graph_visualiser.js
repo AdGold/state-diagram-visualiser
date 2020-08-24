@@ -142,6 +142,7 @@ function ssCircleLayout(cy, balls, ss, startAngle, curve) {
 function applyLayout() {
     const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
+    const period = document.getElementById('period').value;
     const layout = document.getElementById('layout').value;
     document.getElementById('layoutss').style.visibility = layout == 'sscircle' ? 'visible' : 'hidden';
     const layoutSpec = { name: layout };
@@ -149,7 +150,8 @@ function applyLayout() {
     cy.edges().style('curve-style', 'bezier');
     if (layout == "prime") {
         if (balls < longestPrimeSiteswap.length &&
-            maxHeight < longestPrimeSiteswap[balls].length) {
+            maxHeight < longestPrimeSiteswap[balls].length &&
+            !period) {
             // Make a circle of the longest prime siteswap.
             const ss = longestPrimeSiteswap[balls][maxHeight];
             let startAngle = 3/2 * Math.PI;
@@ -259,7 +261,9 @@ function updateFaded() {
 function getElements() {
     const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
-    const adjList = makeGraph(balls, maxHeight);
+    const period = parseInt(document.getElementById('period').value);
+    const allowLess = document.getElementById('allowLess').checked;
+    const adjList = makeGraph(balls, maxHeight, period, allowLess);
     const nodes = [];
     for (const state of adjList.keys()) {
         nodes.push({
