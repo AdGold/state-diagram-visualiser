@@ -72,6 +72,42 @@ function ssToInt(ss) {
     }
 }
 
+function validSS(ss) {
+    const lands = ss.map(x => 1);
+    for (let i = 0; i < ss.length; i++) {
+        const land = (ss[i] + i) % ss.length;
+        if (!lands[land]) {
+            return false;
+        } else {
+            lands[land] = 0;
+        }
+    }
+    return true;
+}
+
+function getState(ss) {
+    const maxHeight = Math.max(...ss);
+    const period = ss.length;
+    const repeats = Math.ceil(maxHeight / period);
+    const state = Array(maxHeight).fill(0);
+    for (let r = 0; r < repeats; r++) {
+        for (let i = 0; i < period; i++) {
+            const th = ss[i];
+            const lands = r * period + i + th;
+            if (lands >= repeats * period) {
+                state[lands - repeats * period]++;
+            }
+        }
+    }
+    state.reverse();
+    let stateInt = 0;
+    for (const s of state) {
+        stateInt *= 2;
+        stateInt = stateInt + s;
+    }
+    return stateInt;
+}
+
 function ssCircleLayout(cy, balls, ss, startAngle, curve) {
     if (startAngle === undefined) {
         startAngle = 3/2 * Math.PI;
@@ -189,14 +225,12 @@ function generate() {
         elements: getElements(),
         style: GRAPH_STYLE,
     });
-    cy.nodes().on('mouseout',updateFaded);
-    cy.nodes().on('mouseover', evt => {
-        evt.target.closedNeighborhood().style('opacity', 1);
-        cy.elements().subtract(evt.target.closedNeighborhood()).style('opacity', 0.2);
-    });
+    cy.nodes().on('mouseout', updateFaded);
+    cy.nodes().on('mouseover', evt => highlight(evt.target.closedNeighborhood()));
     cy.nodes().on('tap', toggleNode);
     applyLayout();
     resetClicked();
+    updateHighlightSS();
     updateColors();
 };
 
@@ -237,6 +271,44 @@ function resetClicked() {
     updateFaded();
 }
 
+function updateHighlightSS() {
+    const ssEl = document.getElementById('highlightSS');
+    const ss = ssEl.value;
+    const ssMsg = document.getElementById('highlightSSMsg');
+    cy.highlightSS = undefined;
+    if (ss) {
+        const show = {};
+        const siteswap = [];
+        let sum = 0;
+        for (const th of ss) {
+            siteswap.push(ssToInt(th));
+            sum += ssToInt(th);
+        }
+        if (validSS(siteswap)) {
+            const balls = sum / siteswap.length;
+            const graphBalls = parseInt(document.getElementById('balls').value)
+            if (balls != graphBalls) {
+                ssMsg.innerHTML = 'Siteswap has the wrong number of balls';
+            } else {
+                ssMsg.innerHTML = '';
+                let state = getState(siteswap);
+                for (let i = 0; i < siteswap.length; i++) {
+                    show[state] = true;
+                    const next = makeThrow(state, siteswap[i]);
+                    show[state+'to'+next] = true;
+                    state = next;
+                }
+                cy.highlightSS = show;
+            }
+        } else {
+            ssMsg.innerHTML = 'Invalid siteswap';
+        }
+    } else {
+        ssMsg.innerHTML = '';
+    }
+    updateFaded();
+}
+
 function toggleNode(e) {
     const clickedNode = e.target;
     if (cy.clicked.has(clickedNode)) {
@@ -248,12 +320,21 @@ function toggleNode(e) {
 }
 
 function updateFaded() {
-    const faded = new Set();
-    for (const fade of document.getElementById('faded').value.split(',')) {
-        faded.add(parseInt(fade));
+    if (cy.highlightSS !== undefined) {
+        const eles = cy.elements().filter(el => cy.highlightSS[el.data().id] !== undefined);
+        highlight(eles);
+    } else {
+        const faded = new Set();
+        for (const fade of document.getElementById('faded').value.split(',')) {
+            faded.add(parseInt(fade));
+        }
+        const nodes = (cy.clicked.length == 0) ? cy.nodes() : cy.clicked;
+        const eles = nodes.union(nodes.edgesWith(nodes).filter(edge => !faded.has(edge.data().label)));
+        highlight(eles);
     }
-    const nodes = (cy.clicked.length == 0) ? cy.nodes() : cy.clicked;
-    const eles = nodes.union(nodes.edgesWith(nodes).filter(edge => !faded.has(edge.data().label)));
+}
+
+function highlight(eles) {
     eles.style('opacity', 1);
     cy.elements().subtract(eles).style('opacity', 0.2);
 }

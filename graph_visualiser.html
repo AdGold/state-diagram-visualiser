@@ -39,6 +39,10 @@
                 <input type="button" value="Clear selected nodes" onclick="resetClicked()" title="Clear all nodes selected by clicking">
                 <br>
                 Fade throws <input type="text" id="faded" oninput="updateFaded()" title="Throws to fade (comma separated)">
+                <br>
+                Highlight SS <input type="text" id="highlightSS" oninput="updateHighlightSS()" title="Fade all except siteswap">
+                <br>
+                <span class="error" id="highlightSSMsg"></span>
             </div>
             <div>
                 <b>Layout</b>

@@ -20,6 +20,11 @@ input[type=number]{
     font-style: bold;
 }
 
+.error {
+    font-size: 16px;
+    color: red;
+}
+
 input[type=checkbox] {
     width: 20px;
     height: 20px;
