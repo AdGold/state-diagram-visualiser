@@ -214,6 +214,10 @@ function applyLayout() {
         layoutSpec.minNodeSpacing = 100;
         layoutSpec.concentric = node => maxHeight - node.data().label.length;
         layoutSpec.levelWidth = node => 1;
+    } else if (layout == "cose") {
+        layoutSpec.idealEdgeLength = 150;
+    } else if (layout == "cose-bilkent") {
+        layoutSpec.idealEdgeLength = 150;
     }
     cy.layout(layoutSpec).run();
 }
