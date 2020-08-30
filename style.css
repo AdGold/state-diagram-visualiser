@@ -28,7 +28,6 @@ input[type=number]{
 input[type=checkbox] {
     width: 20px;
     height: 20px;
-    -moz-appearance: none;
     vertical-align: top;
     margin-top: 1px;
 }
