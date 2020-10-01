@@ -251,10 +251,9 @@ function gradient(val, maxVal) {
     return `hsl(${HSL[0]}, ${HSL[1]}%, ${HSL[2]}%)`;
 }
 
-const stateColors = ["#d19fa0","#c74a4c","#8db2f7","#98d4ab","#2753a3","#9bd1ac","#e6e6e6","#374e78","#a2f5bc","#c5d0e3"];
+//const stateColors = ["#d19fa0","#c74a4c","#8db2f7","#98d4ab","#2753a3","#9bd1ac","#e6e6e6","#374e78","#a2f5bc","#c5d0e3"];
 
-/* Object */
-    //['springgreen', 'yellow', 'skyblue', 'orange', 'lightcoral', 'lavender', 'gray'];
+const stateColors = ['springgreen', 'skyblue', 'lightcoral', 'yellow', "#8db2f7", 'orange', 'lavender', "#2753a3", 'gray'];
 
 function updateColors() {
     const balls = parseInt(document.getElementById('balls').value);
