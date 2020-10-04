@@ -21,11 +21,13 @@
                 <br>
                 Max height&nbsp;<input type="number" id="maxHeight" value="5" onchange="generate()">
                 <br>
-                <b> Period limitation </b>
+                <b> Graph compression </b>
                 <br>
-                Period&nbsp;<input type="text" id="period" value="" onchange="generate()" class="optionalNumber" title="Only shows states which exist in siteswaps of this period (leave empty for no filtering)">
+                Period limit&nbsp;<input type="text" id="period" value="" onchange="generate()" class="optionalNumber" title="Only shows states which exist in siteswaps of this period (leave empty for no filtering)">
                 <br>
                 <input type="checkbox" id="allowLess" onclick="generate()">Allow smaller periods
+                <br>
+                <input type="checkbox" id="reduceGraph" onclick="generate()">Reduce graph
             </div>
             <div>
                 <b>Colours</b>

@@ -179,6 +179,7 @@ function applyLayout() {
     const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
     const period = document.getElementById('period').value;
+    const reduce = document.getElementById('reduceGraph').checked;
     const layout = document.getElementById('layout').value;
     document.getElementById('layoutss').style.visibility = layout == 'sscircle' ? 'visible' : 'hidden';
     const layoutSpec = { name: layout };
@@ -187,7 +188,7 @@ function applyLayout() {
     if (layout == "prime") {
         if (balls < longestPrimeSiteswap.length &&
             maxHeight < longestPrimeSiteswap[balls].length &&
-            !period) {
+            !period && !reduce) {
             // Make a circle of the longest prime siteswap.
             const ss = longestPrimeSiteswap[balls][maxHeight];
             let startAngle = 3/2 * Math.PI;
@@ -259,7 +260,9 @@ function updateColors() {
     const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
     const colorStates = document.getElementById('colorStates').checked;
-    const colorThrows = document.getElementById('colorThrows').checked;
+    const reduce = document.getElementById('reduceGraph').checked;
+    // Never colour throws when graph is reduced.
+    const colorThrows = document.getElementById('colorThrows').checked && !reduce;
     cy.nodes().forEach(n => {
         const col = colorStates ? stateColors[n.data().label.length - balls] : 'lightseagreen';
         n.style('background-color', col);
@@ -293,15 +296,30 @@ function updateHighlightSS() {
         if (validSS(siteswap)) {
             const balls = sum / siteswap.length;
             const graphBalls = parseInt(document.getElementById('balls').value)
+            const graphMaxHeight = parseInt(document.getElementById('maxHeight').value)
+            const reduced = document.getElementById('reduceGraph').checked;
             if (balls != graphBalls) {
                 ssMsg.innerHTML = 'Siteswap has the wrong number of balls';
             } else {
                 ssMsg.innerHTML = '';
                 let state = getState(siteswap);
+                // If we're on the reduced graph, find a starting state that exists
+                let offset = 0;
+                if (reduced) {
+                    while (offset < siteswap.length && isRemovableState(state, graphMaxHeight)) {
+                        state = makeThrow(state, siteswap[offset]);
+                        offset++;
+                    }
+                }
+                // prev tracks the previous state of the pattern which is in the (possibly reduced) graph.
+                let prev = state;
                 for (let i = 0; i < siteswap.length; i++) {
                     show[state] = true;
-                    const next = makeThrow(state, siteswap[i]);
-                    show[state+'to'+next] = true;
+                    const next = makeThrow(state, siteswap[(offset + i) % siteswap.length]);
+                    show[prev+'to'+next] = true;
+                    if (!reduced || !isRemovableState(next, graphMaxHeight)) {
+                        prev = next;
+                    }
                     state = next;
                 }
                 cy.highlightSS = show;
@@ -350,7 +368,8 @@ function getElements() {
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
     const period = parseInt(document.getElementById('period').value);
     const allowLess = document.getElementById('allowLess').checked;
-    const adjList = makeGraph(balls, maxHeight, period, allowLess);
+    const reduce = document.getElementById('reduceGraph').checked;
+    const adjList = makeGraph(balls, maxHeight, period, allowLess, reduce);
     const nodes = [];
     for (const state of adjList.keys()) {
         nodes.push({

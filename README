@@ -1,7 +1,7 @@
 State Diagram Visualiser
 ---
 
-This is a visualiser for juggling state transition diagrams, it shows the diagram for a given number of balls and maximum height (optionally also limitting the period). Note that when any of these numbers get too high your computer will crawl to a halt- up to height 11 should be easily fast enough on most computers.
+This is a visualiser for juggling state transition diagrams, it shows the diagram for a given number of balls and maximum height (optionally also limitting the period). Note that when any of these numbers get too high your computer will crawl to a halt- up to height 11 should be easily fast enough on most computers. The graph can be reduced similarly to [here](https://users.mai.liu.se/hanlu09/juggling/siteswap-states.pdf) which uses a smaller set of nodes and has sequences of throws on the edges instead.
 
 By default states are coloured by length (maximum throw in the state) and throws are a gradient based on height. These can be disabled using the checkboxes.
 
