@@ -1,22 +1,10 @@
 div, p, span {
-  font-size: 20px;
+    font-size: 20px;
 }
 
-input[type=number]{
-    width: 80px;
-} 
-
-.optionalNumber {
-    width: 80px;
-} 
-
-.heading {
+#heading {
+    padding: 20px;
     font-size: 30px;
-    font-style: bold;
-}
-
-.subheading {
-    font-size: 25px;
     font-style: bold;
 }
 
@@ -25,33 +13,53 @@ input[type=number]{
     color: red;
 }
 
+input[type=number], input[type=text]{
+    width: 100px;
+} 
+
 input[type=checkbox] {
-    width: 20px;
-    height: 20px;
-    vertical-align: top;
-    margin-top: 1px;
+    width: 15px;
+    height: 15px;
+    vertical-align: center;
 }
 
-.controls {
+input[type=button] {
+    margin: 4px 2px;
+    font-size: 15px;
+}
+
+#controls {
     display: flex-column;
     justify-content: space-between;
+    border-radius: 15px;
+    padding: 15px;
+    width: 300px;
 }
 
-.controls > div {
-    padding-top: 20px;
+#controls > div {
+    margin-left: 15px;
+}
+
+fieldset {
+    /* border: none; */
+    border-radius: 10px;
     padding-right: 0;
-    padding-bottom: 20px;
-    padding-left: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
 }
 
-label {
-    width: 250px;
+legend {
+    font-weight: bold;
+}
+
+.text-label {
+    width: 120px;
     display: inline-block;
 }
 
 #cy {
-  width: 100%;
-  height: 100%;
+    width: 100%;
+    height: 100%;
 }
 
 body {

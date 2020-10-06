@@ -8,48 +8,48 @@
         <script src="visualiser.js"></script>
     </head>
     <body>
-        <div class="controls">
-            <div>
-                <span class="heading">State Transition Diagram Generator</span>
+        <div>
+        <div id="heading">
+            State Transition Diagram Generator
+        </div>
+        <div id="controls">
+            <fieldset>
+                <legend>Graph generation</legend>
+                <label for="balls" class="text-label">Balls</label>
+                <input type="number" id="balls" value="3" onchange="generate()">
                 <br>
+                <label for="maxHeight" class="text-label">Max height</label>
+                <input type="number" id="maxHeight" value="5" onchange="generate()">
+            </fieldset>
+            <fieldset>
+                <legend>Graph compression</legend>
+                <label for="period" class="text-label">Period limit</label>
+                <input type="text" id="period" value="" onchange="generate()" title="Only shows states which exist in siteswaps of this period (leave empty for no filtering)">
                 <br>
-            </div>
-            <div>
-                <b>Graph generation</b>
+                <input type="checkbox" id="allowLess" onclick="generate()">
+                <label for="allowLess">Allow smaller periods</label>
                 <br>
-                Number of balls&nbsp;<input type="number" id="balls" value="3" onchange="generate()">
-                <br>
-                Max height&nbsp;<input type="number" id="maxHeight" value="5" onchange="generate()">
-                <br>
-                <b> Graph compression </b>
-                <br>
-                Period limit&nbsp;<input type="text" id="period" value="" onchange="generate()" class="optionalNumber" title="Only shows states which exist in siteswaps of this period (leave empty for no filtering)">
-                <br>
-                <input type="checkbox" id="allowLess" onclick="generate()">Allow smaller periods
-                <br>
-                <input type="checkbox" id="reduceGraph" onclick="generate()">Reduce graph
-            </div>
-            <div>
-                <b>Colours</b>
-                <br>
+                <input type="checkbox" id="reduceGraph" onclick="generate()">
+                <label for="reduceGraph">Reduce graph</label>
+            </fieldset>
+            <fieldset>
+                <legend>Colours</legend>
                 <input type="checkbox" id="colorThrows" checked onchange="updateColors()">Colour throws
                 <br>
                 <input type="checkbox" id="colorStates" checked onchange="updateColors()">Colour states
-            </div>
-            <div>
-                <b>Fading</b>
+            </fieldset>
+            <fieldset>
+                <legend>Fading</legend>
+                <label for="faded" class="text-label">Fade throws</label><input type="text" id="faded" oninput="updateFaded()" title="Throws to fade (comma separated)">
                 <br>
-                <input type="button" value="Clear selected nodes" onclick="resetClicked()" title="Clear all nodes selected by clicking">
-                <br>
-                Fade throws <input type="text" id="faded" oninput="updateFaded()" title="Throws to fade (comma separated)">
-                <br>
-                Highlight SS <input type="text" id="highlightSS" oninput="updateHighlightSS()" title="Fade all except siteswap">
+                <label for="highlightSS" class="text-label">Highlight SS</label><input type="text" id="highlightSS" oninput="updateHighlightSS()" title="Fade all except siteswap">
                 <br>
                 <span class="error" id="highlightSSMsg"></span>
-            </div>
-            <div>
-                <b>Layout</b>
+                <input type="button" value="Clear selected nodes" onclick="resetClicked()" title="Clear all nodes selected by clicking">
                 <br>
+            </fieldset>
+            <fieldset>
+                <legend>Layout</legend>
                 <select id="layout" onchange="applyLayout()">
                     <option value="prime">Auto</option>
                     <option value="circle">Circle</option>
@@ -64,10 +64,11 @@
                 </select>
                 <br>
                 <input type="text" id="layoutss" oninput="applyLayout()">
-            </div>
+            </fieldset>
             <div>
-                <a href="https://github.com/AdGold/state-diagram-visualiser">GitHub</a>
+                <a href="https://github.com/AdGold/state-diagram-visualiser/blob/master/README.md">Documentation</a>
             </div>
+        </div>
         </div>
         <div id="cy"></div>
     </body>
