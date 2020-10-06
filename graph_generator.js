@@ -10,6 +10,18 @@ function makeThrow(state, th) {
     }
 }
 
+function intToSS(n) {
+    if (n < 10) {
+        return n.toString();
+    }
+    else if (n < 36) {
+        return String.fromCharCode(n - 10 + 97);
+    }
+    else {
+        return '{' + n.toString() + '}';
+    }
+}
+
 function groundState(balls) {
     return (1 << balls) - 1;
 }
@@ -62,7 +74,8 @@ function makeGraph(balls, maxHeight, period, allowLess, reduce) {
                 if (!edges.get(state)) {
                     edges.set(state, []);
                 }
-                edges.get(state).push([th.toString(), toState]);
+                const thStr = reduce ? intToSS(th) : th.toString();
+                edges.get(state).push([thStr, toState]);
                 if (!done.has(toState)) {
                     todo.push(toState);
                     done.add(toState);
