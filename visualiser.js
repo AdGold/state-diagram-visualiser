@@ -264,7 +264,7 @@ function updateColors() {
     // Never colour throws when graph is reduced.
     const colorThrows = document.getElementById('colorThrows').checked && !reduce;
     cy.nodes().forEach(n => {
-        const col = colorStates ? stateColors[n.data().label.length - balls] : 'lightseagreen';
+        const col = colorStates ? stateColors[n.data().label.length - balls] : 'springgreen';
         n.style('background-color', col);
     });
     cy.edges().forEach(e => {
