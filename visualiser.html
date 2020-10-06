@@ -40,13 +40,12 @@
             </fieldset>
             <fieldset>
                 <legend>Fading</legend>
+                <input type="button" value="Clear selected nodes" onclick="resetClicked()" title="Clear all nodes selected by clicking">
                 <label for="faded" class="text-label">Fade throws</label><input type="text" id="faded" oninput="updateFaded()" title="Throws to fade (comma separated)">
                 <br>
                 <label for="highlightSS" class="text-label">Highlight SS</label><input type="text" id="highlightSS" oninput="updateHighlightSS()" title="Fade all except siteswap">
                 <br>
                 <span class="error" id="highlightSSMsg"></span>
-                <input type="button" value="Clear selected nodes" onclick="resetClicked()" title="Clear all nodes selected by clicking">
-                <br>
             </fieldset>
             <fieldset>
                 <legend>Layout</legend>

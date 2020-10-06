@@ -295,11 +295,14 @@ function updateHighlightSS() {
         }
         if (validSS(siteswap)) {
             const balls = sum / siteswap.length;
+            const maxHeight = Math.max(...siteswap);
             const graphBalls = parseInt(document.getElementById('balls').value)
             const graphMaxHeight = parseInt(document.getElementById('maxHeight').value)
             const reduced = document.getElementById('reduceGraph').checked;
             if (balls != graphBalls) {
                 ssMsg.innerHTML = 'Siteswap has the wrong number of balls';
+            } else if (maxHeight > graphMaxHeight) {
+                ssMsg.innerHTML = 'Siteswap has too high a max throw';
             } else {
                 ssMsg.innerHTML = '';
                 let state = getState(siteswap);
@@ -350,7 +353,7 @@ function updateFaded() {
     } else {
         const faded = new Set();
         for (const fade of document.getElementById('faded').value.split(',')) {
-            faded.add(parseInt(fade));
+            faded.add(fade);
         }
         const nodes = (cy.clicked.length == 0) ? cy.nodes() : cy.clicked;
         const eles = nodes.union(nodes.edgesWith(nodes).filter(edge => !faded.has(edge.data().label)));
