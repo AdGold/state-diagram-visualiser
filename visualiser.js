@@ -72,51 +72,89 @@ function ssToInt(ss) {
     }
 }
 
+function ssToArr(ss) {
+	if (ss=="0") {
+		return [];
+	} else if (ss.length==1){
+		return [ssToInt(ss)];
+	} else {
+		th = [];
+		for (const t of ss.slice(1,-1)) {
+			th.push(ssToInt(t));
+		}
+		return th;
+	}
+}
+
+function parseSS(ss){
+	let multiplex = false;
+	let ssArr = []
+	let t = ""
+	for (const i of ss){
+		t += i
+		if (i=='[') {
+			multiplex = true;
+		} else if (multiplex && i==']') {
+			multiplex = false;
+			ssArr.push(ssToArr(t));
+			t="";
+		} else if (!multiplex) {
+			ssArr.push(ssToArr(t));
+			t="";
+		}
+	}
+	return ssArr;
+}
+
 function validSS(ss) {
-    const lands = ss.map(x => 1);
+    const lands = ss.map(x => x.length);
+	let test = ss.map(x => 0);
     for (let i = 0; i < ss.length; i++) {
-        const land = (ss[i] + i) % ss.length;
-        if (!lands[land]) {
-            return false;
-        } else {
-            lands[land] = 0;
-        }
+		for (const t of ss[i]) {
+			const land = (t+i)%ss.length;
+			if (lands[land]==test[land]) {
+				return false;
+			}
+			test[land]++;
+		}
     }
     return true;
 }
 
-function getState(ss) {
-    const maxHeight = Math.max(...ss);
+function getState(ss, maxMultiplex) {
+    const maxHeight = Math.max(...(ss.map(x => Math.max(...x))));
+	console.log(maxHeight);
     const period = ss.length;
     const repeats = Math.ceil(maxHeight / period);
     const state = Array(maxHeight).fill(0);
     for (let r = 0; r < repeats; r++) {
         for (let i = 0; i < period; i++) {
-            const th = ss[i];
-            const lands = r * period + i + th;
-            if (lands >= repeats * period) {
-                state[lands - repeats * period]++;
-            }
+			for (const t of ss[i]) {
+				const lands = r * period + i + t;
+				if (lands >= repeats * period) {
+					state[lands - repeats * period]++;
+				}
+			}
         }
     }
     state.reverse();
     let stateInt = 0;
     for (const s of state) {
-        stateInt *= 2;
+        stateInt *= maxMultiplex+1;
         stateInt = stateInt + s;
     }
     return stateInt;
 }
 
-function ssCircleLayout(cy, balls, ss, startAngle, curve) {
+function ssCircleLayout(cy, balls, maxMultiplex, ss, startAngle, curve) {
     if (startAngle === undefined) {
         startAngle = 3/2 * Math.PI;
     }
     const order = {};
-    let state = groundState(balls);
+    let state = getState(ss, maxMultiplex);
     for (let i = 0; i < ss.length; i++) {
         order[state] = i;
-        state = makeThrow(state, ssToInt(ss[i]));
+        state = makeThrow(state, ss[i], maxMultiplex);
     }
     const mainCircle = cy.nodes().filter(node => order[node.data().id] !== undefined);
     mainCircle.layout({
@@ -178,6 +216,7 @@ function ssCircleLayout(cy, balls, ss, startAngle, curve) {
 function applyLayout() {
     const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
+	const maxMultiplex = parseInt(document.getElementById('maxMultiplex').value);
     const period = document.getElementById('period').value;
     const reduce = document.getElementById('reduceGraph').checked;
     const layout = document.getElementById('layout').value;
@@ -188,25 +227,26 @@ function applyLayout() {
     if (layout == "prime") {
         if (balls < longestPrimeSiteswap.length &&
             maxHeight < longestPrimeSiteswap[balls].length &&
+			maxMultiplex == 1 &&
             !period && !reduce) {
             // Make a circle of the longest prime siteswap.
-            const ss = longestPrimeSiteswap[balls][maxHeight];
+            const ss = parseSS(longestPrimeSiteswap[balls][maxHeight]);
             let startAngle = 3/2 * Math.PI;
             if (balls + 2 == maxHeight && balls < rotations.length) {
                 startAngle = rotations[balls] * (2 * Math.PI) / ss.length - Math.PI / 2;
             }
-            ssCircleLayout(cy, balls, ss, startAngle, true);
+            ssCircleLayout(cy, balls, maxMultiplex, ss, startAngle, true);
             return;
         } else {
             // Default to circle
             layoutSpec.name = "circle";
         }
     } else if (layout == "sscircle") {
-        const ss = document.getElementById('layoutss').value;
-        ssCircleLayout(cy, balls, ss, false);
+        const ss = parseSS(document.getElementById('layoutss').value);
+        ssCircleLayout(cy, balls, maxMultiplex, ss, false);
         return;
     } else if (layout == "breadthfirst") {
-        layoutSpec.roots = [groundState(balls)];
+        layoutSpec.roots = [groundState(balls, maxMultiplex)];
     } else if (layout == "concentric1") {
         layoutSpec.name = "concentric";
         layoutSpec.minNodeSpacing = 100;
@@ -259,16 +299,18 @@ const stateColors = ['springgreen', 'skyblue', 'lightcoral', 'yellow', "#8db2f7"
 function updateColors() {
     const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
+	const maxMultiplex = parseInt(document.getElementById('maxMultiplex').value);
     const colorStates = document.getElementById('colorStates').checked;
     const reduce = document.getElementById('reduceGraph').checked;
     // Never colour throws when graph is reduced.
     const colorThrows = document.getElementById('colorThrows').checked && !reduce;
     cy.nodes().forEach(n => {
-        const col = colorStates ? stateColors[n.data().label.length - balls] : 'springgreen';
+        const col = colorStates ? stateColors[n.data().label.length - Math.max(Math.ceil(balls/maxMultiplex),1)] : 'springgreen';
         n.style('background-color', col);
     });
     cy.edges().forEach(e => {
-        const col = colorThrows ? gradient(parseInt(e.data().label), maxHeight) : 'darkblue';
+		const t = e.data().label.toString().split('').reduce((a,b) => (isNaN(a) ? 0 : parseInt(a))+(isNaN(b) ? 0 : parseInt(b)),0);	
+        const col = colorThrows ? gradient(t, maxHeight*maxMultiplex) : 'darkblue';
         e.style('line-color', col);
         e.style('target-arrow-color', col);
     });
@@ -289,28 +331,32 @@ function updateHighlightSS() {
         const show = {};
         const siteswap = [];
         let sum = 0;
-        for (const th of ss) {
-            siteswap.push(ssToInt(th));
-            sum += ssToInt(th);
+        for (const th of parseSS(ss)) {
+            siteswap.push(th);
+            sum += th.reduce((a,b) => a+b,0);
         }
         if (validSS(siteswap)) {
             const balls = sum / siteswap.length;
-            const maxHeight = Math.max(...siteswap);
+            const maxHeight = Math.max(...(siteswap.map(x => Math.max(...x))));
+			const maxMultiplex = Math.max(...(siteswap.map(x => x.length)));
             const graphBalls = parseInt(document.getElementById('balls').value)
             const graphMaxHeight = parseInt(document.getElementById('maxHeight').value)
+			const graphMaxMultiplex = parseInt(document.getElementById('maxMultiplex').value)
             const reduced = document.getElementById('reduceGraph').checked;
             if (balls != graphBalls) {
                 ssMsg.innerHTML = 'Siteswap has the wrong number of balls';
             } else if (maxHeight > graphMaxHeight) {
                 ssMsg.innerHTML = 'Siteswap has too high a max throw';
-            } else {
+            } else if (maxMultiplex > graphMaxMultiplex) {
+				ssMsg.innerHTML = 'Siteswap has too large a multiplex';
+			} else {
                 ssMsg.innerHTML = '';
-                let state = getState(siteswap);
+                let state = getState(siteswap, graphMaxMultiplex);
                 // If we're on the reduced graph, find a starting state that exists
                 let offset = 0;
                 if (reduced) {
-                    while (offset < siteswap.length && isRemovableState(state, graphMaxHeight)) {
-                        state = makeThrow(state, siteswap[offset]);
+                    while (offset < siteswap.length && isRemovableState(state, graphMaxHeight, graphMaxMultiplex)) {
+                        state = makeThrow(state, siteswap[offset], graphMaxMultiplex);
                         offset++;
                     }
                 }
@@ -318,9 +364,9 @@ function updateHighlightSS() {
                 let prev = state;
                 for (let i = 0; i < siteswap.length; i++) {
                     show[state] = true;
-                    const next = makeThrow(state, siteswap[(offset + i) % siteswap.length]);
+                    const next = makeThrow(state, siteswap[(offset + i) % siteswap.length], graphMaxMultiplex);
                     show[prev+'to'+next] = true;
-                    if (!reduced || !isRemovableState(next, graphMaxHeight)) {
+                    if (!reduced || !isRemovableState(next, graphMaxHeight, graphMaxMultiplex)) {
                         prev = next;
                     }
                     state = next;
@@ -356,29 +402,32 @@ function updateFaded() {
             faded.add(fade);
         }
         const nodes = (cy.clicked.length == 0) ? cy.nodes() : cy.clicked;
-        const eles = nodes.union(nodes.edgesWith(nodes).filter(edge => !faded.has(edge.data().label)));
+		const invert = document.getElementById('invertFade').checked;
+        const eles = nodes.union(nodes.edgesWith(nodes).filter(edge => invert == faded.has(edge.data().label)));
         highlight(eles);
     }
 }
 
 function highlight(eles) {
     eles.style('opacity', 1);
-    cy.elements().subtract(eles).style('opacity', 0.2);
+    cy.elements().subtract(eles).style('opacity', 0.1);
 }
 
 function getElements() {
     const balls = parseInt(document.getElementById('balls').value);
     const maxHeight = parseInt(document.getElementById('maxHeight').value);
+	const maxMultiplex = parseInt(document.getElementById('maxMultiplex').value);
     const period = parseInt(document.getElementById('period').value);
+	const maxSplit = parseInt(document.getElementById('maxSplit').value);
     const allowLess = document.getElementById('allowLess').checked;
     const reduce = document.getElementById('reduceGraph').checked;
-    const adjList = makeGraph(balls, maxHeight, period, allowLess, reduce);
+    const adjList = makeGraph(balls, maxHeight, maxMultiplex, period, maxSplit, allowLess, reduce);
     const nodes = [];
     for (const state of adjList.keys()) {
         nodes.push({
             data: {
                 id: state, 
-                label: stateName(state),
+                label: stateName(state, maxMultiplex),
             }
         });
     }
