@@ -282,6 +282,8 @@ function generate() {
     resetClicked();
     updateHighlightSS();
     updateColors();
+    document.getElementById('numNodes').innerText = cy.nodes().length;
+    document.getElementById('numEdges').innerText = cy.edges().length;
 };
 
 // Colouring

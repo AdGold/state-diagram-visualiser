@@ -74,6 +74,20 @@ html {
     margin: 0;
 }
 
+#footer {
+    position: absolute;
+    left: 93%;
+    top: 95%;
+    width: 7%;
+    height: 5%;
+    opacity: 0.3;
+    font-size: 16px;
+}
+
+#footer > span {
+    font-size: 16px;
+}
+
 .mobile-line-break {
     width: 0;
 }
