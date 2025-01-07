@@ -41,7 +41,7 @@ function arrToSS(n) {
     }
 }
 
-function* throwRange(depth, maxHeight, maxSplit, th) {
+function* throwRange(depth, maxHeight, maxSplit, th, skipThrows) {
     if (depth <= 0) {
         yield th;
     } else {
@@ -49,6 +49,9 @@ function* throwRange(depth, maxHeight, maxSplit, th) {
         const start = (th.length == 0 ? 1 : th[0]);
         const end = maxHeight;
         for (let i = start; i <= end; i++) {
+            if (skipThrows && skipThrows.has(i)) {
+                continue;
+            }
             th.unshift(i);
             yield* throwRange(depth - 1, maxHeight, maxSplit, th);
             th.shift();
@@ -109,7 +112,7 @@ function getNewEdges(edges, state, th, to, maxHeight, maxMultiplex) {
     }
 }
 
-function makeGraph(balls, maxHeight, maxMultiplex, period, maxSplit, allowLess, reduce) {
+function makeGraph(balls, maxHeight, maxMultiplex, period, maxSplit, allowLess, reduce, skipThrows) {
     // edges are of the form [throw, target state]
     const edges = new Map();
     const todo = [groundState(balls, maxMultiplex)];
@@ -118,7 +121,7 @@ function makeGraph(balls, maxHeight, maxMultiplex, period, maxSplit, allowLess, 
     while (todo.length > 0) {
         const state = todo.pop();
         let th = [];
-        for (const t of throwRange(state % (maxMultiplex + 1), maxHeight, maxSplit, th)) {
+        for (const t of throwRange(state % (maxMultiplex + 1), maxHeight, maxSplit, th, skipThrows)) {
             const toState = makeThrow(state, t, maxMultiplex);
             if (toState != undefined) {
                 if (!edges.get(state)) {

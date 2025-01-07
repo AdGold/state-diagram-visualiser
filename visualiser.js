@@ -429,7 +429,8 @@ function getElements() {
     const maxSplit = parseInt(document.getElementById('maxSplit').value);
     const allowLess = document.getElementById('allowLess').checked;
     const reduce = document.getElementById('reduceGraph').checked;
-    const adjList = makeGraph(balls, maxHeight, maxMultiplex, period, maxSplit, allowLess, reduce);
+    const skipThrows = new Set(document.getElementById('skipped').value.split(',').map(x => parseInt(x, 10)));
+    const adjList = makeGraph(balls, maxHeight, maxMultiplex, period, maxSplit, allowLess, reduce, skipThrows);
     const nodes = [];
     for (const state of adjList.keys()) {
         nodes.push({
