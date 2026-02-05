@@ -7,6 +7,8 @@
  * numbers where n = maxMultiplex + 1), and edges are throws.
  */
 
+import { VanillaSiteswap } from 'universal-siteswap';
+
 // ==================== Base-n Conversion for State Graph ====================
 
 /**
@@ -47,36 +49,24 @@ export function groundState(balls, maxMultiplex) {
 }
 
 /**
+ * Convert a VanillaState array to the integer representation used by the graph.
+ * The state array [1, 1, 1] becomes 7 in base 2 (for maxMultiplex=1).
+ */
+function stateArrayToInt(stateArr, maxMultiplex) {
+    return stateArr.reduceRight((acc, s) => acc * (maxMultiplex + 1) + s, 0);
+}
+
+/**
  * Get the state (as an integer) that a siteswap starts/ends in.
+ * Uses VanillaSiteswap to compute the state, then converts to integer.
  *
  * @param {number[][]} ss - Parsed siteswap (array of throw arrays)
  * @param {number} maxMultiplex - Maximum multiplex size
  * @returns {number} State as an integer
  */
 export function getState(ss, maxMultiplex) {
-    const maxHeight = Math.max(...ss.map(x => Math.max(...x)));
-    const period = ss.length;
-    const repeats = Math.ceil(maxHeight / period);
-    const state = Array(maxHeight).fill(0);
-
-    for (let r = 0; r < repeats; r++) {
-        for (let i = 0; i < period; i++) {
-            for (const t of ss[i]) {
-                const lands = r * period + i + t;
-                if (lands >= repeats * period) {
-                    state[lands - repeats * period]++;
-                }
-            }
-        }
-    }
-
-    state.reverse();
-    let stateInt = 0;
-    for (const s of state) {
-        stateInt *= maxMultiplex + 1;
-        stateInt += s;
-    }
-    return stateInt;
+    const siteswap = new VanillaSiteswap(ss);
+    return stateArrayToInt(siteswap.state.state, maxMultiplex);
 }
 
 /**
