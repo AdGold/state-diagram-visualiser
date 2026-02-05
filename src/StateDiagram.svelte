@@ -15,6 +15,16 @@
         longestPrimeSiteswap, rotations
     } from './state-diagram-generator.js';
 
+    /**
+     * Parse a siteswap string and convert to the format expected by state-diagram-generator.
+     * VanillaSiteswap represents "0" as [0], but the generator expects [] (empty array).
+     */
+    function parseSS(ssString) {
+        return VanillaSiteswap.Parse(ssString).throws.map(th =>
+            th.length === 1 && th[0] === 0 ? [] : th
+        );
+    }
+
     // ==================== Props ====================
 
     // Initial graph parameters
@@ -217,7 +227,7 @@
             if (balls < longestPrimeSiteswap.length &&
                 maxHeight < longestPrimeSiteswap[balls].length &&
                 maxMultiplex === 1 && !period && !reduceGraph) {
-                const ss = VanillaSiteswap.Parse(longestPrimeSiteswap[balls][maxHeight]).throws;
+                const ss = parseSS(longestPrimeSiteswap[balls][maxHeight]);
                 let startAngle = 3/2 * Math.PI;
                 if (balls + 2 === maxHeight && balls < rotations.length) {
                     startAngle = rotations[balls] * (2 * Math.PI) / ss.length - Math.PI / 2;
@@ -227,7 +237,7 @@
             }
             cy.layout({ name: 'circle' }).run();
         } else if (layout === 'sscircle') {
-            const ss = VanillaSiteswap.Parse(layoutSS).throws;
+            const ss = parseSS(layoutSS);
             if (ss.length > 0) {
                 ssCircleLayout(ss);
                 return;
@@ -291,7 +301,8 @@
             return;
         }
 
-        const siteswap = parsed.throws;
+        // Convert [0] to [] for compatibility with state-diagram-generator
+        const siteswap = parsed.throws.map(th => th.length === 1 && th[0] === 0 ? [] : th);
         const ssBalls = parsed.numObjects;
         const ssMaxHeight = parsed.maxHeight;
         const ssMaxMultiplex = parsed.maxMultiplex;
