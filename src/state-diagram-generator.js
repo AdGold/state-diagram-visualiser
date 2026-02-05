@@ -5,20 +5,41 @@
  * A state diagram represents all possible juggling states for a given number
  * of balls and maximum throw height. Nodes are states (represented as base-n
  * numbers where n = maxMultiplex + 1), and edges are throws.
+ *
+ * Uses universal-siteswap for parsing and validation.
  */
 
-// ==================== Base-36 Conversion ====================
+import { VanillaSiteswap } from 'universal-siteswap';
+
+// ==================== Re-exports from universal-siteswap ====================
+
+// Re-export parsing functions for convenience
+export { VanillaSiteswap };
 
 /**
- * Convert a single siteswap character to an integer.
- * 0-9 -> 0-9, a-z -> 10-35
+ * Parse a siteswap string into an array of throws.
+ * Each throw is an array of integers (to support multiplexes).
+ * "531" -> [[5], [3], [1]]
+ * "[53]1" -> [[5, 3], [1]]
+ *
+ * Uses VanillaSiteswap.Parse internally.
  */
-export function ssToInt(ss) {
-    if ('0' <= ss && ss <= '9') {
-        return parseInt(ss);
-    }
-    return ss.charCodeAt(0) - 'a'.charCodeAt(0) + 10;
+export function parseSS(ss) {
+    const parsed = VanillaSiteswap.Parse(ss);
+    return parsed.throws;
 }
+
+/**
+ * Check if a siteswap is valid (no collisions).
+ * Uses VanillaSiteswap internally.
+ */
+export function validSS(ss) {
+    // ss is already in throws format (array of arrays)
+    const siteswap = new VanillaSiteswap(ss);
+    return siteswap.isValid;
+}
+
+// ==================== Base-n Conversion for State Graph ====================
 
 /**
  * Convert an array of throw heights to siteswap notation.
@@ -41,75 +62,14 @@ export function arrToSS(n) {
     return n.length > 1 ? '[' + s + ']' : s;
 }
 
-/**
- * Convert a siteswap throw string to an array of integers.
- * "0" -> [], "5" -> [5], "[53]" -> [5, 3]
- */
-export function ssToArr(ss) {
-    if (ss === '0') {
-        return [];
-    }
-    if (ss.length === 1) {
-        return [ssToInt(ss)];
-    }
-    const th = [];
-    for (const t of ss.slice(1, -1)) {
-        th.push(ssToInt(t));
-    }
-    return th;
-}
-
-// ==================== Siteswap Parsing ====================
-
-/**
- * Parse a siteswap string into an array of throws.
- * Each throw is an array of integers (to support multiplexes).
- * "531" -> [[5], [3], [1]]
- * "[53]1" -> [[5, 3], [1]]
- */
-export function parseSS(ss) {
-    let multiplex = false;
-    const ssArr = [];
-    let t = '';
-    for (const char of ss) {
-        t += char;
-        if (char === '[') {
-            multiplex = true;
-        } else if (multiplex && char === ']') {
-            multiplex = false;
-            ssArr.push(ssToArr(t));
-            t = '';
-        } else if (!multiplex) {
-            ssArr.push(ssToArr(t));
-            t = '';
-        }
-    }
-    return ssArr;
-}
-
-/**
- * Check if a siteswap is valid (no collisions).
- */
-export function validSS(ss) {
-    const lands = ss.map(x => x.length);
-    const test = ss.map(() => 0);
-    for (let i = 0; i < ss.length; i++) {
-        for (const t of ss[i]) {
-            const land = (t + i) % ss.length;
-            if (lands[land] === test[land]) {
-                return false;
-            }
-            test[land]++;
-        }
-    }
-    return true;
-}
-
 // ==================== State Calculations ====================
 
 /**
  * Calculate the ground state for a given number of balls and multiplex limit.
  * The ground state is the "default" juggling state with balls in the lowest positions.
+ *
+ * States are represented as integers in base (maxMultiplex + 1), where each "digit"
+ * represents how many balls land at that time.
  */
 export function groundState(balls, maxMultiplex) {
     const base = maxMultiplex + 1;
@@ -120,6 +80,10 @@ export function groundState(balls, maxMultiplex) {
 
 /**
  * Get the state (as an integer) that a siteswap starts/ends in.
+ *
+ * @param {number[][]} ss - Parsed siteswap (array of throw arrays)
+ * @param {number} maxMultiplex - Maximum multiplex size
+ * @returns {number} State as an integer
  */
 export function getState(ss, maxMultiplex) {
     const maxHeight = Math.max(...ss.map(x => Math.max(...x)));
