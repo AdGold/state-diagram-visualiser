@@ -5,39 +5,7 @@
  * A state diagram represents all possible juggling states for a given number
  * of balls and maximum throw height. Nodes are states (represented as base-n
  * numbers where n = maxMultiplex + 1), and edges are throws.
- *
- * Uses universal-siteswap for parsing and validation.
  */
-
-import { VanillaSiteswap } from 'universal-siteswap';
-
-// ==================== Re-exports from universal-siteswap ====================
-
-// Re-export parsing functions for convenience
-export { VanillaSiteswap };
-
-/**
- * Parse a siteswap string into an array of throws.
- * Each throw is an array of integers (to support multiplexes).
- * "531" -> [[5], [3], [1]]
- * "[53]1" -> [[5, 3], [1]]
- *
- * Uses VanillaSiteswap.Parse internally.
- */
-export function parseSS(ss) {
-    const parsed = VanillaSiteswap.Parse(ss);
-    return parsed.throws;
-}
-
-/**
- * Check if a siteswap is valid (no collisions).
- * Uses VanillaSiteswap internally.
- */
-export function validSS(ss) {
-    // ss is already in throws format (array of arrays)
-    const siteswap = new VanillaSiteswap(ss);
-    return siteswap.isValid;
-}
 
 // ==================== Base-n Conversion for State Graph ====================
 

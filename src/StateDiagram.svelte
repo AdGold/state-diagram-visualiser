@@ -8,9 +8,10 @@
      */
     import { onMount, onDestroy } from 'svelte';
     import cytoscape from 'cytoscape';
+    import { VanillaSiteswap } from 'universal-siteswap';
     import {
         makeGraph, graphToElements, groundState,
-        makeThrow, parseSS, validSS, getState, isRemovableState,
+        makeThrow, getState, isRemovableState,
         longestPrimeSiteswap, rotations
     } from './state-diagram-generator.js';
 
@@ -216,7 +217,7 @@
             if (balls < longestPrimeSiteswap.length &&
                 maxHeight < longestPrimeSiteswap[balls].length &&
                 maxMultiplex === 1 && !period && !reduceGraph) {
-                const ss = parseSS(longestPrimeSiteswap[balls][maxHeight]);
+                const ss = VanillaSiteswap.Parse(longestPrimeSiteswap[balls][maxHeight]).throws;
                 let startAngle = 3/2 * Math.PI;
                 if (balls + 2 === maxHeight && balls < rotations.length) {
                     startAngle = rotations[balls] * (2 * Math.PI) / ss.length - Math.PI / 2;
@@ -226,7 +227,7 @@
             }
             cy.layout({ name: 'circle' }).run();
         } else if (layout === 'sscircle') {
-            const ss = parseSS(layoutSS);
+            const ss = VanillaSiteswap.Parse(layoutSS).throws;
             if (ss.length > 0) {
                 ssCircleLayout(ss);
                 return;
@@ -283,17 +284,17 @@
             return;
         }
 
-        const siteswap = parseSS(highlightSS);
-        if (!validSS(siteswap)) {
+        const parsed = VanillaSiteswap.Parse(highlightSS);
+        if (!parsed.isValid) {
             highlightSSMsg = 'Invalid siteswap';
             updateFaded();
             return;
         }
 
-        const sum = siteswap.flat().reduce((a, b) => a + b, 0);
-        const ssBalls = sum / siteswap.length;
-        const ssMaxHeight = Math.max(...siteswap.flat());
-        const ssMaxMultiplex = Math.max(...siteswap.map(x => x.length));
+        const siteswap = parsed.throws;
+        const ssBalls = parsed.numObjects;
+        const ssMaxHeight = parsed.maxHeight;
+        const ssMaxMultiplex = parsed.maxMultiplex;
 
         if (ssBalls !== balls) {
             highlightSSMsg = 'Wrong number of balls';
